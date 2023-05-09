@@ -16,7 +16,7 @@ Implementation of Neural Processes in Pytorch and synthetic examples including:
 
 - [Official Neural Process implementations by Deepmind](https://github.com/deepmind/neural-processes)
 - [Emilien Dupont Neural Processes implementation](https://github.com/EmilienDupont/neural-processes)
-- [Infinite Norm blogpost and PyTorch implementation](https://chrisorm.github.io/NGP.html)
+- [Infinite Norm blogpost contrasting NPs and VAEs and PyTorch implementation](https://chrisorm.github.io/NGP.html)
 - [Kaspar Märtens blogpost](https://kasparmartens.rbind.io/post/np/)
 - [Wessel Brunsima neuralprocesses package](https://github.com/wesselb/neuralprocesses) and [documentation]()
 - [Yann Dubois et al. blog/website](https://yanndubs.github.io/Neural-Process-Family/text/Intro.html)
