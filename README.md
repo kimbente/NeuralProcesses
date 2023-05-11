@@ -1,8 +1,9 @@
 # NeuralProcesses
 
 Implementation of Neural Processes in Pytorch and synthetic examples including:
-- 1D regression of Gaussian Process functions
+- 1D regression of sin functions
 - 1D regression of discontinous sin functions
+- 1D regression of Gaussian Process functions
 
 ## Citations
 

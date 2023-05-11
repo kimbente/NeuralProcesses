@@ -60,7 +60,7 @@ class SineDiscontData(Dataset):
     """
     Dataset of piecewise function 
     for x < bp: 
-        f(x) = a * sin(x - b) where a and b are randomly
+        f(x) = a * sin(x - b)
     for x >= bp:
         f(x) = a * sin(x - b) + c
     The breakpoint bp is fixed.
@@ -86,8 +86,8 @@ class SineDiscontData(Dataset):
     num_points : int
         Number of points at which to evaluate f(x) for x in [-pi, pi].
     """
-    def __init__(self, amplitude_range = (0, 1.), horizontal_shift_range = (-.5, .5),
-                 vertical_shift_range = (-1, 1), breakpoint = (0),
+    def __init__(self, amplitude_range = (0.5, 1.), horizontal_shift_range = (-.5, .5),
+                 vertical_shift_range = (0, 1), breakpoint = (0),
                  num_samples = 1000, num_points = 100):
         self.amplitude_range = amplitude_range
         self.horizontal_shift_range = horizontal_shift_range

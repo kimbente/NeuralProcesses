@@ -101,8 +101,8 @@ class NeuralProcessTrainer():
         """
         # Log likelihood has shape (batch_size, num_target, y_dim). Take mean
         # over batch and sum over number of targets and dimensions of y
-        log_likelihood = p_y_pred.log_prob(y_target).mean(dim=0).sum()
+        log_likelihood = p_y_pred.log_prob(y_target).mean(dim = 0).sum()
         # KL has shape (batch_size, r_dim). Take mean over batch and sum over
         # r_dim (since r_dim is dimension of normal distribution)
-        kl = kl_divergence(q_target, q_context).mean(dim=0).sum()
-        return -log_likelihood + kl
+        kl = kl_divergence(q_target, q_context).mean(dim = 0).sum()
+        return - log_likelihood + kl
