@@ -18,7 +18,7 @@ class rEncoder(nn.Module):
         Dimension of hidden layer.
 
     r_dim : int
-        Dimension of output representation r.
+        Dimension of output representation r (bottleneck).
     """
     def __init__(self, x_dim, y_dim, h_dim, r_dim):
         super(rEncoder, self).__init__()
@@ -29,10 +29,13 @@ class rEncoder(nn.Module):
         self.r_dim = r_dim
 
         # Layers as Python list
+        # h_dim is constant for all layers of the MLP
+        # input layer
         layers = [nn.Linear(x_dim + y_dim, h_dim),
                   nn.ReLU(inplace = True),
                   nn.Linear(h_dim, h_dim),
                   nn.ReLU(inplace = True),
+                  # output layer
                   nn.Linear(h_dim, r_dim)]
 
         # Sequential stacking of layers defined above
@@ -46,13 +49,12 @@ class rEncoder(nn.Module):
         y : torch.Tensor
             Shape (batch_size, y_dim)
         """
-        input_pairs = torch.cat((x, y), dim=1)
+        input_pairs = torch.cat((x, y), dim = 1)
         return self.input_to_hidden(input_pairs)
-
 
 class zEncoder(nn.Module):
     """
-    Maps a representation r to mu and sigma which will define the normal
+    Maps a representation r (aggregated) to mu and sigma which will define the normal
     distribution from which we sample the latent variable z.
 
     Parameters
@@ -69,6 +71,7 @@ class zEncoder(nn.Module):
         self.r_dim = r_dim
         self.z_dim = z_dim
 
+        # hidden layer also has dimensionality r_dim
         self.r_to_hidden = nn.Linear(r_dim, r_dim)
         self.hidden_to_mu = nn.Linear(r_dim, z_dim)
         self.hidden_to_sigma = nn.Linear(r_dim, z_dim)
@@ -81,7 +84,7 @@ class zEncoder(nn.Module):
         hidden = torch.relu(self.r_to_hidden(r))
         mu = self.hidden_to_mu(hidden)
         # Define sigma following convention in "Empirical Evaluation of Neural
-        # Process Objectives" and "Attentive Neural Processes"
+        # Process Objectives" and "Attentive Neural Processes": variance clipping to avoid collapsing
         sigma = 0.1 + 0.9 * torch.sigmoid(self.hidden_to_sigma(hidden))
         return mu, sigma
 
@@ -159,6 +162,6 @@ class Decoder(nn.Module):
         mu = mu.view(batch_size, num_points, self.y_dim)
         sigma_arg = sigma_arg.view(batch_size, num_points, self.y_dim)
         # Define sigma following convention in "Empirical Evaluation of Neural
-        # Process Objectives" and "Attentive Neural Processes"
+        # Process Objectives" and "Attentive Neural Processes" variance clipping
         sigma = 0.1 + 0.9 * F.softplus(sigma_arg)
         return mu, sigma

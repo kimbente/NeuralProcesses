@@ -121,8 +121,9 @@ class NeuralProcess(nn.Module):
 
         # Set neuralprocess.training = True or neuralprocess.training = False
         if self.training:
-            # Encode target and context (context needs to be encoded to
+            # Encode target and context (target needs to be encoded to
             # calculate kl term)
+            # During training pass target pairs through encoder aswell
             mu_target, sigma_target = self.xy_to_mu_sigma(x_target, y_target)
             mu_context, sigma_context = self.xy_to_mu_sigma(x_context, y_context)
 
@@ -131,7 +132,7 @@ class NeuralProcess(nn.Module):
             q_target = Normal(mu_target, sigma_target)
             q_context = Normal(mu_context, sigma_context)
             # sample from z distribution: rsample: sampling using reparameterization trick. Keeps comp. graph alive and thus allows backprop.
-            # TARGET?!
+            # During training: Sample from q_target since this is the suberset
             z_sample = q_target.rsample()
 
             # Get parameters of output distribution

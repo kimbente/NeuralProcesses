@@ -22,15 +22,19 @@ def context_target_split(x, y, num_context, num_extra_target):
     num_extra_target : int
         Number of additional target points (n - m), where m <= n. 
     """
-    # Indices we can choose from
+    # Indices we can choose from / x spacing
     num_points = x.shape[1]
+
     # Sample locations of context and target points
     locations = np.random.choice(num_points,
                                  size = num_context + num_extra_target,
                                  replace = False)
+    
+    # Select first num_context indices for x_content
     x_context = x[:, locations[:num_context], :]
     y_context = y[:, locations[:num_context], :]
-    # Target as superset
+    
+    # Target as superset: select all selected locations
     x_target = x[:, locations, :]
     y_target = y[:, locations, :]
     return x_context, y_context, x_target, y_target

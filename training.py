@@ -55,17 +55,18 @@ class NeuralProcessTrainer():
         for epoch in range(epochs):
             epoch_loss = 0.
             for i, data in enumerate(data_loader):
+                # set gradients back to zero after every epoch
                 self.optimizer.zero_grad()
 
-                # Sample number of context and target points
+                # sample number of context and target points
                 num_context = randint(*self.num_context_range)
                 num_extra_target = randint(*self.num_extra_target_range)
 
                 x, y = data
-                x_context, y_context, x_target, y_target = \
-                    context_target_split(x, y, num_context, num_extra_target)
-                p_y_pred, q_target, q_context = \
-                    self.neural_process(x_context, y_context, x_target, y_target)
+                # currently just selecting a very small subset of locations
+                x_context, y_context, x_target, y_target = context_target_split(x, y, num_context, num_extra_target)
+                # pass through NP
+                p_y_pred, q_target, q_context = self.neural_process(x_context, y_context, x_target, y_target)
 
                 loss = self._loss(p_y_pred, y_target, q_target, q_context)
                 loss.backward()
@@ -78,7 +79,7 @@ class NeuralProcessTrainer():
                 if self.steps % self.print_freq == 0:
                     print("iteration {}, loss {:.3f}".format(self.steps, loss.item()))
 
-            print("Epoch: {}, Avg_loss: {}".format(epoch, epoch_loss / len(data_loader)))
+            print("Epoch: {}, average loss: {}".format(epoch, round(epoch_loss / len(data_loader), 3)))
             self.epoch_loss_history.append(epoch_loss / len(data_loader))
 
     def _loss(self, p_y_pred, y_target, q_target, q_context):
@@ -99,10 +100,14 @@ class NeuralProcessTrainer():
         q_context : one of torch.distributions.Distribution
             Latent distribution for context points.
         """
-        # Log likelihood has shape (batch_size, num_target, y_dim). Take mean
-        # over batch and sum over number of targets and dimensions of y
+        # p_y_pred.log_prob(y_target) has shape (batch_size, num_target (may vary), y_dim). 
+        # Take mean over batch and sum (log space) over number of targets and dimensions of y
+        # sum: size of num_yarget varies
         log_likelihood = p_y_pred.log_prob(y_target).mean(dim = 0).sum()
-        # KL has shape (batch_size, r_dim). Take mean over batch and sum over
-        # r_dim (since r_dim is dimension of normal distribution)
+
+        # kl_divergence(q_target, q_context) has shape (batch_size, r_dim). 
+        # Take mean over batch and sum over r_dim (since r_dim is dimension of normal distribution)
         kl = kl_divergence(q_target, q_context).mean(dim = 0).sum()
+
+        # Minimise sum of NLL (negative log likelihood) and kl between distibutions of latent z
         return - log_likelihood + kl
