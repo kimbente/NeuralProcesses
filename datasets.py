@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 from math import pi
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+from torchvision import datasets, transforms
 
 
 class SineData(Dataset):
@@ -132,3 +133,37 @@ class SineDiscontData(Dataset):
     def __len__(self):
         return self.num_samples
     
+
+def mnist(batch_size = 16, size = 28):
+    """MNIST dataloader. 60,000 small square 28×28 pixel grayscale images of handwritten single digits between 0 and 9.
+
+    Parameters
+    ----------
+    batch_size : int
+
+    size : int
+        Size (height and width) of each image. Default is 28 for no resizing.
+
+    Returns
+    -------
+    dataloader objects
+    """
+    # Compose various transformations together
+    combined_transforms = transforms.Compose([
+        # Resize the input image to the given size.
+        transforms.Resize(28),
+        # Convert a PIL Image or ndarray to tensor and scale the values accordingly.
+        transforms.ToTensor(),
+    ])
+
+    train_data = datasets.MNIST(root = 'http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz', train = True, 
+                                download = True, transform = combined_transforms)
+
+    test_data = datasets.MNIST(root = 'http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz', train = False, 
+                               download = True, transform = combined_transforms)
+
+    # Store into DataLoader object
+    train_loader = DataLoader(train_data, batch_size = batch_size, shuffle = True)
+    test_loader = DataLoader(test_data, batch_size = batch_size, shuffle = True)
+
+    return train_loader, test_loader

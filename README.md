@@ -21,6 +21,7 @@ Implementation of Neural Processes in Pytorch and synthetic examples including:
   - Provides intuition for priors in NPs.
 - [Wessel Brunsima neuralprocesses package](https://github.com/wesselb/neuralprocesses) and [documentation]()
 - [Yann Dubois et al. blog/website](https://yanndubs.github.io/Neural-Process-Family/text/Intro.html)
+- [Xuesong Wangs' implementation](https://github.com/xuesongwang/Neural-Process-Family)
 - [Infinite Norm blogpost contrasting NPs and VAEs and PyTorch implementation](https://chrisorm.github.io/NGP.html)
   - Implementation not consistent with papers.
   - VAEs learn the a latent representation for data points. NPs learn a latent representation for functions via data sets.

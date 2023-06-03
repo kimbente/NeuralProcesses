@@ -1,6 +1,9 @@
 import torch
 # import three coders from coders.py
 from coders import rEncoder, zEncoder, Decoder
+# import helper function from utils.py
+from utils import mask_to_np_input
+
 from torch import nn
 from torch.distributions import Normal
 
@@ -133,7 +136,9 @@ class NeuralProcess(nn.Module):
             q_context = Normal(mu_context, sigma_context)
             # sample from z distribution: rsample: sampling using reparameterization trick. Keeps comp. graph alive and thus allows backprop.
             # During training: Sample from q_target since this is the suberset
-            z_sample = q_target.rsample()
+            # PREVIOUSLY
+            # z_sample = q_target.rsample()
+            z_sample = q_context.rsample()
 
             # Get parameters of output distribution
             y_pred_mu, y_pred_sigma = self.xz_to_y(x_target, z_sample)
@@ -153,3 +158,57 @@ class NeuralProcess(nn.Module):
             p_y_pred = Normal(y_pred_mu, y_pred_sigma)
 
             return p_y_pred
+        
+### Spatial model ###
+
+class NeuralProcess2D(nn.Module):
+    """
+    Wraps regular Neural Process for image processing.
+
+    Parameters
+    ----------
+    img_size : tuple of ints
+        E.g. (1, 28, 28) or (3, 32, 32)
+
+    r_dim : int
+        Dimension of output representation r.
+
+    z_dim : int
+        Dimension of latent variable z.
+
+    h_dim : int
+        Dimension of hidden layer in encoder and decoder.
+    """
+    def __init__(self, img_size, r_dim, z_dim, h_dim):
+        super(NeuralProcess2D, self).__init__()
+        self.img_size = img_size
+        self.num_channels, self.height, self.width = img_size
+        self.r_dim = r_dim
+        self.z_dim = z_dim
+        self.h_dim = h_dim
+
+        self.neural_process = NeuralProcess(x_dim = 2, y_dim = self.num_channels,
+                                            r_dim = r_dim, z_dim = z_dim,
+                                            h_dim = h_dim)
+
+    def forward(self, img, context_mask, target_mask):
+        """
+        Given an image and masks of context and target points, returns a
+        distribution over pixel intensities at the target points.
+
+        Parameters
+        ----------
+        img : torch.Tensor
+            Shape (batch_size, channels, height, width)
+
+        context_mask : torch.ByteTensor
+            Shape (batch_size, height, width). Binary mask indicating
+            the pixels to be used as context.
+
+        target_mask : torch.ByteTensor
+            Shape (batch_size, height, width). Binary mask indicating
+            the pixels to be used as target.
+        """
+        x_context, y_context = mask_to_np_input(img, context_mask)
+        x_target, y_target = mask_to_np_input(img, target_mask)
+        return self.neural_process(x_context, y_context, x_target, y_target)
