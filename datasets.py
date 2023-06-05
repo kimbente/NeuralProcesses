@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import gpytorch
 from math import pi
 from torch.utils.data import Dataset, DataLoader
 from torchvision import datasets, transforms
@@ -167,3 +168,121 @@ def mnist(batch_size = 16, size = 28):
     test_loader = DataLoader(test_data, batch_size = batch_size, shuffle = True)
 
     return train_loader, test_loader
+
+
+#### GP ####
+
+class LinearGPModel(gpytorch.models.ExactGP):
+    def __init__(self, train_x, train_y, likelihood, init_linearmean_weight):
+        super(LinearGPModel, self).__init__(train_x, train_y, likelihood)
+
+        self._init_linearmean_weight = init_linearmean_weight
+
+        ### LINEAR MEAN ###
+        self.mean_module = gpytorch.means.LinearMean(input_size = 1)
+        self.mean_module.initialize(weights = self._init_linearmean_weight)
+        # Will not be updated during training
+        self.mean_module.weights.requires_grad = False
+
+        ### KERNEL ###
+        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.LinearKernel())
+
+    def forward(self, x):
+        mean_x = self.mean_module(x)
+        covar_x = self.covar_module(x)
+        return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+    
+class RBFGPModel(gpytorch.models.ExactGP):
+    def __init__(self, train_x, train_y, likelihood, init_lengthscale):
+        super(RBFGPModel, self).__init__(train_x, train_y, likelihood)
+
+        self._init_lengthscale = init_lengthscale
+
+        ### LINEAR MEAN ###
+        self.mean_module = gpytorch.means.ConstantMean(input_size = 1)
+
+        ### KERNEL ###
+        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
+        self.covar_module.base_kernel.lengthscale = self._init_lengthscale
+
+    def forward(self, x):
+        mean_x = self.mean_module(x)
+        covar_x = self.covar_module(x)
+        return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
+
+# inherits Dataset from torch.utils.data
+class GP_coin(Dataset):
+    """
+    Dataset created from linear kernel and rbf kernel.
+
+    Parameters
+    ----------
+    num_samples : int
+        Number of samples of the function contained in dataset.
+
+    num_points : int
+        Number of points at which to evaluate f(x) for x in [-pi, pi].
+    """
+    def __init__(self, num_samples = 1000, num_points = 100):
+        # Num
+        self.num_samples = num_samples
+        self.num_points = num_points
+
+        # Dim
+        self.x_dim = 1  # x and y dim are fixed for this dataset.
+        self.y_dim = 1
+
+        ### MODELS ###
+        # LINEAR
+        # Load state dict
+        linear_state_dict = torch.load('/experiments_1D/data/GP_models/model_state_linear_model.pth')
+        # Initialise model
+        train_x = torch.tensor([])
+        train_y = torch.tensor([])
+        init_linearmean_weight = torch.tensor(1, dtype = torch.int64)   
+        # Likelihood
+        linear_likelihood = gpytorch.likelihoods.FixedNoiseGaussianLikelihood(noise = torch.tensor([0.2]), learn_additional_noise = False)
+        linear_model = LinearGPModel(train_x, train_y, linear_likelihood, init_linearmean_weight)
+        # Load state dict into model
+        linear_model.load_state_dict(linear_state_dict)
+        # Assign
+        self._linear_model = linear_model
+
+        # RBF
+        # Load state dict
+        rbf_state_dict = torch.load('/experiments_1D/data/GP_models/model_state_rbf_model.pth')
+        # Intialise model
+        train_x = torch.tensor([-3, -2, 0, 2, 3])
+        train_y = torch.tensor([2.5, 3.5, 0, -3.5, -2.5])
+        init_lengthscale = torch.tensor(1, dtype = torch.int64)
+        # Likelihood
+        rbf_likelihood = gpytorch.likelihoods.FixedNoiseGaussianLikelihood(noise = torch.tensor([.1]), learn_additional_noise = True)
+        rbf_model = RBFGPModel(train_x, train_y, rbf_likelihood, init_lengthscale)
+        # Load state dict into model
+        rbf_model.load_state_dict(rbf_state_dict)
+        self._rbf_model = rbf_model
+
+        # Generate data
+        self.data = []
+
+        x = torch.linspace(-pi, pi, num_points).unsqueeze(1)
+
+        for i in range(num_samples):
+            coin = torch.rand(1)
+
+            if coin > 0.5:
+                linear_f_preds = linear_model(x)
+                y = linear_f_preds.sample()
+
+            else:
+                rbf_f_preds = rbf_model(x)
+                y = rbf_f_preds.sample()
+            
+            self.data.append((x, y))
+            
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
