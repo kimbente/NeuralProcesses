@@ -26,6 +26,11 @@ def context_target_split(x, y, num_context, num_extra_target):
     num_points = x.shape[1]
 
     # Sample locations of context and target points
+    print(x.shape)
+    print(num_points)
+    print(num_context)
+    print(num_extra_target)
+
     locations = np.random.choice(num_points,
                                  size = num_context + num_extra_target,
                                  replace = False)
@@ -52,7 +57,11 @@ def mask_to_np_input(img, mask, normalize=True):
     Parameters
     ----------
     img : torch.Tensor
-        Shape (N, C, H, W). Pixel intensities should be in [0, 1]
+        Shape (N, C, H, W). Pixel intensities should be in [0, 1].
+        N number
+        C Channel
+        H Height
+        W Width
 
     mask : torch.ByteTensor
         Binary matrix where 0 corresponds to masked pixel and 1 to a visible
@@ -233,7 +242,7 @@ def inpaint(model, img, context_mask, device):
     img_rec = xy_to_img(x_target.cpu(), p_y_pred.loc.detach().cpu(), img.size())
     img_rec = img_rec[0]  # Remove batch dimension
     # Add context points back to image
-    context_mask_img = context_mask.unsqueeze(0).repeat(3, 1, 1)
+    context_mask_img = context_mask.unsqueeze(0).repeat(1, 1, 1)
     img_rec[context_mask_img] = img[context_mask_img]
     # Reset model to mode it was in before inpainting
     model.neural_process.training = is_training

@@ -2,7 +2,9 @@ import torch
 from random import randint
 from torch import nn
 from torch.distributions.kl import kl_divergence
-from utils import (context_target_split)
+from utils import (context_target_split, mask_to_np_input, batch_context_target_mask)
+from neuralprocess import NeuralProcess2D
+
 
 
 class NeuralProcessTrainer():
@@ -13,7 +15,7 @@ class NeuralProcessTrainer():
     ----------
     device : torch.device
 
-    neural_process : neural_process.NeuralProcess or NeuralProcessImg instance
+    neural_process : neural_process.NeuralProcess or NeuralProcess2D instance
 
     optimizer : one of torch.optim optimizers
 
@@ -37,6 +39,9 @@ class NeuralProcessTrainer():
         self.num_context_range = num_context_range
         self.num_extra_target_range = num_extra_target_range
         self.print_freq = print_freq
+
+       # Check if neural process is for 2D
+        self.is_2D = isinstance(self.neural_process, NeuralProcess2D)
 
         self.steps = 0
         self.epoch_loss_history = []
@@ -62,11 +67,31 @@ class NeuralProcessTrainer():
                 num_context = randint(*self.num_context_range)
                 num_extra_target = randint(*self.num_extra_target_range)
 
-                x, y = data
-                # currently just selecting a very small subset of locations
-                x_context, y_context, x_target, y_target = context_target_split(x, y, num_context, num_extra_target)
-                # pass through NP
-                p_y_pred, q_target, q_context = self.neural_process(x_context, y_context, x_target, y_target)
+                ### 2D ###
+                if self.is_2D:
+                    img, _ = data  # data is a tuple (img, label)
+                    batch_size = img.size(0)
+                    context_mask, target_mask = \
+                        batch_context_target_mask(self.neural_process.img_size,
+                                                  num_context, num_extra_target,
+                                                  batch_size)
+
+                    img = img.to(self.device)
+                    context_mask = context_mask.to(self.device)
+                    target_mask = target_mask.to(self.device)
+
+                    p_y_pred, q_target, q_context = \
+                        self.neural_process(img, context_mask, target_mask)
+
+                    # Calculate y_target as this will be required for loss
+                    _, y_target = mask_to_np_input(img, target_mask)
+
+                else:
+                    x, y = data
+                    # currently just selecting a very small subset of locations
+                    x_context, y_context, x_target, y_target = context_target_split(x, y, num_context, num_extra_target)
+                    # pass through NP
+                    p_y_pred, q_target, q_context = self.neural_process(x_context, y_context, x_target, y_target)
 
                 loss = self._loss(p_y_pred, y_target, q_target, q_context)
                 loss.backward()

@@ -15,7 +15,7 @@ class rEncoder(nn.Module):
         Dimension of y values.
 
     h_dim : int
-        Dimension of hidden layer.
+        Dimension of (each) hidden layer.
 
     r_dim : int
         Dimension of output representation r (bottleneck).
@@ -72,6 +72,7 @@ class zEncoder(nn.Module):
         self.z_dim = z_dim
 
         # hidden layer also has dimensionality r_dim
+        # acts as another linear layer
         self.r_to_hidden = nn.Linear(r_dim, r_dim)
         self.hidden_to_mu = nn.Linear(r_dim, z_dim)
         self.hidden_to_sigma = nn.Linear(r_dim, z_dim)

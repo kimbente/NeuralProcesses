@@ -136,7 +136,7 @@ class SineDiscontData(Dataset):
     
 
 def mnist(batch_size = 16, size = 28):
-    """MNIST dataloader. 60,000 small square 28×28 pixel grayscale images of handwritten single digits between 0 and 9.
+    """MNIST dataloader (returns train and test). 60,000 small square 28×28 pixel grayscale images of handwritten single digits between 0 and 9.
 
     Parameters
     ----------
@@ -152,7 +152,7 @@ def mnist(batch_size = 16, size = 28):
     # Compose various transformations together
     combined_transforms = transforms.Compose([
         # Resize the input image to the given size.
-        transforms.Resize(28),
+        transforms.Resize(size),
         # Convert a PIL Image or ndarray to tensor and scale the values accordingly.
         transforms.ToTensor(),
     ])

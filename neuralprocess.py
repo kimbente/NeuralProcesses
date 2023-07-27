@@ -27,7 +27,8 @@ class NeuralProcess(nn.Module):
         Dimension of latent variable z.
 
     h_dim : int
-        Dimension of hidden layers in encoder and decoder.
+        Dimension of (each) hidden layer in encoder and decoder. 
+        (Num. of layers fixed in architecture)
     """
     def __init__(self, x_dim, y_dim, r_dim, z_dim, h_dim):
         super(NeuralProcess, self).__init__()
@@ -126,8 +127,11 @@ class NeuralProcess(nn.Module):
         if self.training:
             # Encode target and context (target needs to be encoded to
             # calculate kl term)
-            # During training pass target pairs through encoder aswell
+            # EmilienDupont/neural-processes: Encode target and context (context needs to be encoded to
+            # calculate kl term)
+            # During training pass target pairs get passed through encoder aswell (unveiling the true y_target)
             mu_target, sigma_target = self.xy_to_mu_sigma(x_target, y_target)
+            # context pairs are now encoded in a distribution
             mu_context, sigma_context = self.xy_to_mu_sigma(x_context, y_context)
 
             # Sample from encoded distribution using reparameterization trick
@@ -135,8 +139,8 @@ class NeuralProcess(nn.Module):
             q_target = Normal(mu_target, sigma_target)
             q_context = Normal(mu_context, sigma_context)
             # sample from z distribution: rsample: sampling using reparameterization trick. Keeps comp. graph alive and thus allows backprop.
-            # During training: Sample from q_target since this is the suberset
-            # PREVIOUSLY
+            # During training: Sample from q_target since this is the superset
+            # PREVIOUSLY in EmilienDupont/neural-processes
             # z_sample = q_target.rsample()
             z_sample = q_context.rsample()
 
@@ -145,7 +149,7 @@ class NeuralProcess(nn.Module):
             # Predictive distribution
             p_y_pred = Normal(y_pred_mu, y_pred_sigma)
 
-            # For KL? Pred based on q_target
+            # Returning the predictive distribution but also both q distributions for the KL term
             return p_y_pred, q_target, q_context
         else:
             # At testing time, encode only context
@@ -182,6 +186,7 @@ class NeuralProcess2D(nn.Module):
     def __init__(self, img_size, r_dim, z_dim, h_dim):
         super(NeuralProcess2D, self).__init__()
         self.img_size = img_size
+        # num_channels e.g. color channels
         self.num_channels, self.height, self.width = img_size
         self.r_dim = r_dim
         self.z_dim = z_dim
@@ -209,6 +214,8 @@ class NeuralProcess2D(nn.Module):
             Shape (batch_size, height, width). Binary mask indicating
             the pixels to be used as target.
         """
+        # applies utility function
         x_context, y_context = mask_to_np_input(img, context_mask)
         x_target, y_target = mask_to_np_input(img, target_mask)
+        # calls neural_process function
         return self.neural_process(x_context, y_context, x_target, y_target)
